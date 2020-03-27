@@ -373,7 +373,7 @@ class BERTDataset(SubwordDataset):
       try:
         from pytorch_pretrained_bert import BertTokenizer
         if self.args['model']['hidden_dim'] == 768:
-          subword_tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
+          subword_tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
           print('Using BERT-base-cased tokenizer to align embeddings with PTB tokens')
         elif self.args['model']['hidden_dim'] == 1024:
           subword_tokenizer = BertTokenizer.from_pretrained('bert-large-cased')
@@ -405,6 +405,8 @@ class BERTDataset(SubwordDataset):
     layer_index = self.args['model']['model_layer']
     print('Loading BERT Pretrained Embeddings from {}; using layer {}'.format(pretrained_embeddings_path, layer_index))
     embeddings = self.generate_subword_embeddings_from_hdf5(observations, pretrained_embeddings_path, layer_index)
+    # TODO: consider substracting embedding shift here, it may be stored in separate file, npz for instance;
+    # just one vector for a language pair, or a matrix
     observations = self.add_embeddings_to_observations(observations, embeddings)
     return observations
 
