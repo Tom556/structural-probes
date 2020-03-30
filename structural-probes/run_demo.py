@@ -107,8 +107,8 @@ def report_on_stdin(args):
   """
 
   # Define the BERT model and tokenizer
-  tokenizer = BertTokenizer.from_pretrained('bert-large-cased')
-  model = BertModel.from_pretrained('bert-large-cased')
+  tokenizer = BertTokenizer.from_pretrained('bert-multi-cased')
+  model = BertModel.from_pretrained('/Volumes/LaCie 1/probing-Hewitt/bert-models/bert-large-cased')
   LAYER_COUNT = 24
   FEATURE_COUNT = 1024
   model.to(args['device'])

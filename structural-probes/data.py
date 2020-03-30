@@ -64,7 +64,8 @@ class SimpleDataset:
         self.args['dataset']['embeddings']['test_path'])
     train_observations = self.optionally_add_embeddings(train_observations, train_embeddings_path)
     dev_observations = self.optionally_add_embeddings(dev_observations, dev_embeddings_path)
-    test_observations = self.optionally_add_embeddings(test_observations, test_embeddings_path)
+    test_observations = self.optionally_add_embeddings(test_observations, test_embeddings_path,
+                                                       translate=('translation' in self.args['dataset']['embeddings']))
     return train_observations, dev_observations, test_observations
 
   def get_observation_class(self, fieldnames):
@@ -232,7 +233,7 @@ class SimpleDataset:
     """
     return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=self.custom_pad, shuffle=False)
 
-  def optionally_add_embeddings(self, observations, pretrained_embeddings_path):
+  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=False):
     """Does not add embeddings; see subclasses for implementations."""
     return observations
 
@@ -283,7 +284,7 @@ class ELMoDataset(SimpleDataset):
     args: the global yaml-derived experiment config dictionary
   """
 
-  def optionally_add_embeddings(self, observations, pretrained_embeddings_path):
+  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=False):
     """Adds pre-computed ELMo embeddings from disk to Observations."""
     layer_index = self.args['model']['model_layer']
     print('Loading ELMo Pretrained Embeddings from {}; using layer {}'.format(pretrained_embeddings_path, layer_index))
@@ -338,7 +339,7 @@ class BERTDataset(SubwordDataset):
     args: the global yaml-derived experiment config dictionary
   """
 
-  def generate_subword_embeddings_from_hdf5(self, observations, filepath, elmo_layer, subword_tokenizer=None):
+  def generate_subword_embeddings_from_hdf5(self, observations, filepath, elmo_layer, subword_tokenizer=None, translate=False):
     '''Reads pre-computed subword embeddings from hdf5-formatted file.
 
     Sentences should be given integer keys corresponding to their order
@@ -387,6 +388,14 @@ class BERTDataset(SubwordDataset):
     hf = h5py.File(filepath, 'r')
     indices = list(hf.keys())
     single_layer_features_list = []
+    if translate:
+      translation_path = os.path.join(self.args['dataset']['embeddings']['root'],
+                                      self.args['dataset']['embeddings']['translation'])
+      translation = np.load(translation_path)['arr_0'][np.newaxis,:]
+      translation = torch.tensor(translation, device=self.args['device'])
+
+    else:
+      translation = None
     for index in tqdm(sorted([int(x) for x in indices]), desc='[aligning embeddings]'):
       observation = observations[index]
       feature_stack = hf[str(index)]
@@ -397,14 +406,16 @@ class BERTDataset(SubwordDataset):
       assert single_layer_features.shape[0] == len(tokenized_sent)
       single_layer_features = torch.tensor([np.mean(single_layer_features[untok_tok_mapping[i][0]:untok_tok_mapping[i][-1]+1,:], axis=0) for i in range(len(untokenized_sent))])
       assert single_layer_features.shape[0] == len(observation.sentence)
+      if translation is not None:
+        single_layer_features = torch.add(single_layer_features, translation)
       single_layer_features_list.append(single_layer_features)
     return single_layer_features_list
 
-  def optionally_add_embeddings(self, observations, pretrained_embeddings_path):
+  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=False):
     """Adds pre-computed BERT embeddings from disk to Observations."""
     layer_index = self.args['model']['model_layer']
     print('Loading BERT Pretrained Embeddings from {}; using layer {}'.format(pretrained_embeddings_path, layer_index))
-    embeddings = self.generate_subword_embeddings_from_hdf5(observations, pretrained_embeddings_path, layer_index)
+    embeddings = self.generate_subword_embeddings_from_hdf5(observations, pretrained_embeddings_path, layer_index, translate=translate)
     # TODO: consider substracting embedding shift here, it may be stored in separate file, npz for instance;
     # just one vector for a language pair, or a matrix
     observations = self.add_embeddings_to_observations(observations, embeddings)
