@@ -77,7 +77,7 @@ class WordPairReporter(Reporter):
         'write_predictions':self.write_json
         }
     self.reporting_root = args['reporting']['root']
-    self.test_reporting_constraint = {'spearmanr', 'uuas', 'root_acc'}
+    self.test_reporting_constraint = {'spearmanr', 'uuas', 'root_acc', 'image_examples'}
 
   def report_spearmanr(self, prediction_batches, dataset, split_name):
     """Writes the Spearman correlations between predicted and true distances.
@@ -199,7 +199,7 @@ class WordPairReporter(Reporter):
         gold_edges = prims_matrix_to_edges(label, words, poses)
         pred_edges = prims_matrix_to_edges(prediction, words, poses)
 
-        if split_name != 'test' and total_sents < 20:
+        if total_sents < 20:
           self.print_tikz(pred_edges, gold_edges, words, split_name)
 
         uspan_correct += len(set([tuple(sorted(x)) for x in gold_edges]).intersection(
@@ -239,7 +239,7 @@ class WordReporter(Reporter):
         'image_examples':self.report_image_examples,
         }
     self.reporting_root = args['reporting']['root']
-    self.test_reporting_constraint = {'spearmanr', 'uuas', 'root_acc'}
+    self.test_reporting_constraint = {'spearmanr', 'uuas', 'root_acc', 'image_examples'}
 
   def report_spearmanr(self, prediction_batches, dataset, split_name):
     """Writes the Spearman correlations between predicted and true depths.

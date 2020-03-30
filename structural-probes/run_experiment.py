@@ -135,7 +135,11 @@ def run_report_results(args, probe, dataset, model, loss, reporter, regimen):
   Requires a simple code change to run on the test set.
   """
   probe_params_path = os.path.join(args['reporting']['root'],args['probe']['params_path'])
-  probe.load_state_dict(torch.load(probe_params_path))
+
+  if not torch.cuda.is_available():
+    probe.load_state_dict(torch.load(probe_params_path, map_location='cpu'))
+  else:
+    probe.load_state_dict(torch.load(probe_params_path))
   probe.eval()
 
   dev_dataloader = dataset.get_dev_dataloader()
