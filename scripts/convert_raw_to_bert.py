@@ -15,6 +15,7 @@ from pytorch_pretrained_bert import BertTokenizer, BertModel, BertForMaskedLM, W
 from argparse import ArgumentParser
 import h5py
 import numpy as np
+import os
 
 argp = ArgumentParser()
 argp.add_argument('input_path')
@@ -24,16 +25,23 @@ args = argp.parse_args()
 
 # Load pre-trained model tokenizer (vocabulary)
 # Crucially, do not do basic tokenization; PTB is tokenized. Just do wordpiece tokenization.
+BERT_MODELS="/lnet/ms/projects/bert/models/"
+
 if args.bert_model == 'base':
   tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-  model = BertModel.from_pretrained('bert-base-cased')
+  model = BertModel.from_pretrained(os.path.join(BERT_MODELS, 'english-base-cased/'))
   LAYER_COUNT = 12
   FEATURE_COUNT = 768
 elif args.bert_model == 'large':
   tokenizer = BertTokenizer.from_pretrained('bert-large-cased')
-  model = BertModel.from_pretrained('bert-large-cased')
+  model = BertModel.from_pretrained(os.path.join(BERT_MODELS, 'english-large-cased/'))
   LAYER_COUNT = 24
   FEATURE_COUNT = 1024
+elif args.bert_model == 'multilingual':
+  tokenizer = BertTokenizer.from_pretrained('bert-base-multilingual-cased')
+  model = BertModel.from_pretrained('bert-base-multilingual-cased')
+  LAYER_COUNT = 12
+  FEATURE_COUNT = 768
 else:
   raise ValueError("BERT model must be base or large")
 

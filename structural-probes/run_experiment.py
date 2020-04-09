@@ -138,6 +138,7 @@ def run_report_results(args, probe, dataset, model, loss, reporter, regimen):
 
   if not torch.cuda.is_available():
     probe.load_state_dict(torch.load(probe_params_path, map_location='cpu'))
+    
   else:
     probe.load_state_dict(torch.load(probe_params_path))
   probe.eval()

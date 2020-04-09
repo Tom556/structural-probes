@@ -190,7 +190,7 @@ class WordPairReporter(Reporter):
           prediction_batch, label_batch,
           length_batch, observation_batch):
         words = observation.sentence
-        poses = observation.xpos_sentence
+        poses = observation.upos_sentence
         length = int(length)
         assert length == len(observation.sentence)
         prediction = prediction[:length,:length]
@@ -212,7 +212,7 @@ class WordPairReporter(Reporter):
 
   def print_tikz(self, prediction_edges, gold_edges, words, split_name):
     ''' Turns edge sets on word (nodes) into tikz dependency LaTeX. '''
-    with open(os.path.join(self.reporting_root, split_name+'.tikz'), 'a') as fout:
+    with open(os.path.join(self.reporting_root, split_name+'.tikz'), 'w') as fout:
       string = """\\begin{dependency}[hide label, edge unit distance=.5ex]
     \\begin{deptext}[column sep=0.05cm]
     """ 
@@ -306,7 +306,7 @@ class WordReporter(Reporter):
         label = list(label[:length].cpu())
         prediction = prediction.data[:length]
         words = observation.sentence
-        poses = observation.xpos_sentence
+        poses = observation.upos_sentence
 
         correct_root_predictions += label.index(0) == get_nopunct_argmin(prediction, words, poses)
         total_sents += 1
@@ -389,9 +389,9 @@ def prims_matrix_to_edges(matrix, words, poses):
   uf = UnionFind(len(matrix))
   for i_index, line in enumerate(matrix):
     for j_index, dist in enumerate(line):
-      if poses[i_index] in ["''", ",", ".", ":", "``", "-LRB-", "-RRB-"]:
+      if poses[i_index] in ["''", ",", ".", ":", "``", "-LRB-", "-RRB-", "PUNCT"]:
         continue
-      if poses[j_index] in ["''", ",", ".", ":", "``", "-LRB-", "-RRB-"]:
+      if poses[j_index] in ["''", ",", ".", ":", "``", "-LRB-", "-RRB-", "PUNCT"]:
         continue
       pairs_to_distances[(i_index, j_index)] = dist
   edges = []
@@ -405,7 +405,7 @@ def get_nopunct_argmin(prediction, words, poses):
   '''
   Gets the argmin of predictions, but filters out all punctuation-POS-tagged words
   '''
-  puncts = ["''", ",", ".", ":", "``", "-LRB-", "-RRB-"]
+  puncts = ["''", ",", ".", ":", "``", "-LRB-", "-RRB-", "PUNCT"]
   original_argmin = np.argmin(prediction)
   for i in range(len(words)):
     argmin = np.argmin(prediction)
