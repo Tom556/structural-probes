@@ -62,10 +62,12 @@ class SimpleDataset:
         self.args['dataset']['embeddings']['dev_path'])
     test_embeddings_path = os.path.join(self.args['dataset']['embeddings']['root'],
         self.args['dataset']['embeddings']['test_path'])
-    train_observations = self.optionally_add_embeddings(train_observations, train_embeddings_path)
-    dev_observations = self.optionally_add_embeddings(dev_observations, dev_embeddings_path)
+    train_observations = self.optionally_add_embeddings(train_observations, train_embeddings_path,
+                                                        translate=self.args['dataset']['embeddings'].get('train_translation', None))
+    dev_observations = self.optionally_add_embeddings(dev_observations, dev_embeddings_path,
+                                                      translate=self.args['dataset']['embeddings'].get('dev_translation', None))
     test_observations = self.optionally_add_embeddings(test_observations, test_embeddings_path,
-                                                       translate=('translation' in self.args['dataset']['embeddings']))
+                                                       translate=self.args['dataset']['embeddings'].get('test_translation', None))
     return train_observations, dev_observations, test_observations
 
   def get_observation_class(self, fieldnames):
@@ -233,7 +235,7 @@ class SimpleDataset:
     """
     return DataLoader(self.test_dataset, batch_size=self.batch_size, collate_fn=self.custom_pad, shuffle=False)
 
-  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=False):
+  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=None):
     """Does not add embeddings; see subclasses for implementations."""
     return observations
 
@@ -284,7 +286,7 @@ class ELMoDataset(SimpleDataset):
     args: the global yaml-derived experiment config dictionary
   """
 
-  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=False):
+  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=None):
     """Adds pre-computed ELMo embeddings from disk to Observations."""
     layer_index = self.args['model']['model_layer']
     print('Loading ELMo Pretrained Embeddings from {}; using layer {}'.format(pretrained_embeddings_path, layer_index))
@@ -339,7 +341,7 @@ class BERTDataset(SubwordDataset):
     args: the global yaml-derived experiment config dictionary
   """
 
-  def generate_subword_embeddings_from_hdf5(self, observations, filepath, elmo_layer, subword_tokenizer=None, translate=False):
+  def generate_subword_embeddings_from_hdf5(self, observations, filepath, elmo_layer, subword_tokenizer=None, translate=None):
     '''Reads pre-computed subword embeddings from hdf5-formatted file.
 
     Sentences should be given integer keys corresponding to their order
@@ -389,9 +391,8 @@ class BERTDataset(SubwordDataset):
     indices = list(hf.keys())
     single_layer_features_list = []
     if translate:
-      translation_path = os.path.join(self.args['dataset']['embeddings']['root'],
-                                      self.args['dataset']['embeddings']['translation'])
-      translation = np.load(translation_path)['arr_0'][np.newaxis,:]
+      translation_path = os.path.join(self.args['dataset']['embeddings']['root'], translate)
+      translation = np.load(translation_path)['arr_0'][elmo_layer, np.newaxis]
       translation = torch.tensor(translation, device=self.args['device'], dtype=torch.float)
 
     else:
@@ -411,7 +412,7 @@ class BERTDataset(SubwordDataset):
       single_layer_features_list.append(single_layer_features)
     return single_layer_features_list
 
-  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=False):
+  def optionally_add_embeddings(self, observations, pretrained_embeddings_path, translate=None):
     """Adds pre-computed BERT embeddings from disk to Observations."""
     layer_index = self.args['model']['model_layer']
     print('Loading BERT Pretrained Embeddings from {}; using layer {}'.format(pretrained_embeddings_path, layer_index))
