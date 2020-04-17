@@ -393,7 +393,7 @@ class BERTDataset(SubwordDataset):
     if translate:
       translation_path = os.path.join(self.args['dataset']['embeddings']['root'], translate)
       translation = np.load(translation_path)['arr_0'][elmo_layer, np.newaxis]
-      translation = torch.tensor(translation, device=self.args['device'], dtype=torch.float)
+      translation = torch.from_numpy(translation).float().to(self.args['device'])
 
     else:
       translation = None
